@@ -640,6 +640,62 @@ func (p *MediaPlaylist) Encode() *bytes.Buffer {
 			}
 			p.buf.WriteRune('\n')
 		}
+		if len(seg.DateRange) > 0 {
+			for _, dr := range seg.DateRange {
+				p.buf.WriteString("#EXT-X-DATERANGE:")
+				p.buf.WriteString("ID=\"")
+				p.buf.WriteString(dr.ID)
+				p.buf.WriteRune('"')
+				if dr.Class != "" {
+					p.buf.WriteString(",CLASS=\"")
+					p.buf.WriteString(dr.Class)
+					p.buf.WriteRune('"')
+				}
+				if !dr.StartDate.IsZero() {
+					p.buf.WriteString(",START-DATE=\"")
+					p.buf.WriteString(dr.StartDate.Format(DATETIME))
+					p.buf.WriteRune('"')
+				}
+				if !dr.EndDate.IsZero() {
+					p.buf.WriteString(",END-DATE=\"")
+					p.buf.WriteString(dr.EndDate.Format(DATETIME))
+					p.buf.WriteRune('"')
+				}
+				if dr.Duration > 0 {
+					p.buf.WriteString(",DURATION=")
+					p.buf.WriteString(strconv.FormatFloat(dr.Duration, 'f', -1, 64))
+				}
+				if dr.PlannedDuration > 0 {
+					p.buf.WriteString(",PLANNED-DURATION=")
+					p.buf.WriteString(strconv.FormatFloat(dr.PlannedDuration, 'f', -1, 64))
+				}
+				if dr.SCTE35Cmd != "" {
+					p.buf.WriteString(",SCTE35-CMD=")
+					p.buf.WriteString(dr.SCTE35Cmd)
+				}
+				if dr.SCTE35In != "" {
+					p.buf.WriteString("SCTE35-IN=")
+					p.buf.WriteString(dr.SCTE35In)
+				}
+				if dr.SCTE35Out != "" {
+					p.buf.WriteString(",SCTE35-OUT=")
+					p.buf.WriteString(dr.SCTE35Out)
+				}
+				if dr.EndOnNext != "" {
+					p.buf.WriteString(",END-ON-NEXT=\"")
+					p.buf.WriteString(dr.EndOnNext)
+					p.buf.WriteRune('"')
+				}
+				for k, v := range dr.X {
+					p.buf.WriteString(",")
+					p.buf.WriteString(k)
+					p.buf.WriteString("=\"")
+					p.buf.WriteString(v)
+					p.buf.WriteRune('"')
+				}
+				p.buf.WriteString("\n")
+			}
+		}
 		if seg.Discontinuity {
 			p.buf.WriteString("#EXT-X-DISCONTINUITY\n")
 		}
@@ -823,6 +879,32 @@ func (p *MediaPlaylist) SetSCTE35(scte35 *SCTE) error {
 		return errors.New("playlist is empty")
 	}
 	p.Segments[p.last()].SCTE = scte35
+	return nil
+}
+
+// SetDateRange sets DateRange to the current media segment
+func (p *MediaPlaylist) SetDateRange(drs []*DateRange) error {
+	if p.count == 0 {
+		return errors.New("playlist is empty")
+	}
+	for _, dr := range drs {
+		if dr.ID == "" {
+			return errors.New("DateRange ID")
+		}
+	}
+	p.Segments[p.last()].DateRange = drs
+	return nil
+}
+
+// AppendDateRange appends DateRange to the current media segment
+func (p *MediaPlaylist) AppendDateRange(dr *DateRange) error {
+	if p.count == 0 {
+		return errors.New("playlist is empty")
+	}
+	if dr.ID == "" {
+		return errors.New("DateRange ID")
+	}
+	p.Segments[p.last()].DateRange = append(p.Segments[p.last()].DateRange, dr)
 	return nil
 }
 
