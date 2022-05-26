@@ -561,6 +561,10 @@ func decodeLineOfMediaPlaylist(p *MediaPlaylist, wv *WV, state *decodingState, l
 			state.custom = make(map[string]CustomTag)
 			state.tagCustom = false
 		}
+		if len(state.daterange) > 0 {
+			p.SetDateRange(state.daterange)
+			state.daterange = []*DateRange{}
+		}
 	// start tag first
 	case line == "#EXTM3U":
 		state.m3u = true
@@ -655,6 +659,41 @@ func decodeLineOfMediaPlaylist(p *MediaPlaylist, wv *WV, state *decodingState, l
 		if state.programDateTime, err = TimeParse(line[25:]); strict && err != nil {
 			return err
 		}
+	case strings.HasPrefix(line, "#EXT-X-DATERANGE:"):
+		dr := new(DateRange)
+		for k, v := range decodeParamsLine(line[17:]) {
+			switch k {
+			case "ID":
+				dr.ID = v
+			case "CLASS":
+				dr.Class = v
+			case "START-DATE":
+				dr.StartDate, _ = time.Parse(DATETIME, v)
+			case "END-DATE":
+				dr.EndDate, _ = time.Parse(DATETIME, v)
+			case "DURATION":
+				dr.Duration, _ = strconv.ParseFloat(v, 64)
+			case "PLANNED-DURATION":
+				dr.PlannedDuration, _ = strconv.ParseFloat(v, 64)
+			case "SCTE35-CMD":
+				dr.SCTE35Cmd = v
+			case "SCTE35-OUT":
+				dr.SCTE35Out = v
+			case "SCTE35-IN":
+				dr.SCTE35In = v
+			case "END-ON-NEXT":
+				dr.EndOnNext = v
+			default:
+				if strings.HasPrefix(k, "X-") {
+					dr.X[k] = v
+				} else {
+					if strict {
+						return fmt.Errorf("unrecognized EXT-X-DATERANGE attribte: %s", k)
+					}
+				}
+			}
+		}
+		state.daterange = append(state.daterange, dr)
 	case !state.tagRange && strings.HasPrefix(line, "#EXT-X-BYTERANGE:"):
 		state.tagRange = true
 		state.listType = MEDIA
