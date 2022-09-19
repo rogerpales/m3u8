@@ -676,7 +676,7 @@ func (p *MediaPlaylist) Encode() *bytes.Buffer {
 					p.buf.WriteString(dr.SCTE35Cmd)
 				}
 				if dr.SCTE35In != "" {
-					p.buf.WriteString("SCTE35-IN=")
+					p.buf.WriteString(",SCTE35-IN=")
 					p.buf.WriteString(dr.SCTE35In)
 				}
 				if dr.SCTE35Out != "" {
